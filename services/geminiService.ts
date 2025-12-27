@@ -34,5 +34,5 @@ export const analyzeAtypicalMovements = async (data: OptionData[], marketTechnic
     }
   });
 
-  return response.text;
+  return response.text || "Análise indisponível no momento.";
 };
