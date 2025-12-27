@@ -1,10 +1,10 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { OptionData, TickerData } from "../types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
 
-export const analyzeAtypicalMovements = async (data: OptionData[], marketTechnicals: TickerData[]) => {
+export const analyzeAtypicalMovements = async (data: OptionData[], marketTechnicals: TickerData[]): Promise<string> => {
   const atypicalOptions = data.filter(o => o.volumeAvgRatio > 2.5);
   
   const prompt = `Analise as opções da B3 com volume atípico considerando o contexto técnico:
@@ -25,14 +25,19 @@ export const analyzeAtypicalMovements = async (data: OptionData[], marketTechnic
   
   Retorne em Português com foco em 'Onde entrar' e 'Até onde levar (Alvo)'.`;
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
-    contents: prompt,
-    config: {
-      temperature: 0.7,
-      thinkingConfig: { thinkingBudget: 2500 }
-    }
-  });
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents: prompt,
+      config: {
+        temperature: 0.7,
+        thinkingConfig: { thinkingBudget: 2500 }
+      }
+    });
 
-  return response.text || "Análise indisponível no momento.";
+    return response.text ?? "Análise indisponível no momento.";
+  } catch (error) {
+    console.error("Gemini API Error:", error);
+    return "Erro ao conectar com a IA. Verifique sua chave de API ou tente novamente mais tarde.";
+  }
 };
