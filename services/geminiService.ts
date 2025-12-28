@@ -1,6 +1,13 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { OptionData, TickerData } from "../types";
+
+// Declaração para corrigir o erro 'Cannot find name process' no TypeScript
+declare const process: {
+  env: {
+    API_KEY: string;
+    [key: string]: string | undefined;
+  }
+};
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
 

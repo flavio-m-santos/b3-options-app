@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { MOCK_TICKERS } from './constants';
 import { OptionData } from './types';
@@ -94,7 +93,7 @@ const App: React.FC = () => {
                     <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse"></div>
                     <span className="text-[10px] font-black text-blue-400">LIVE</span>
                  </div>
-                 <span className="text-[8px] text-gray-500 font-mono mt-0.5">Updated: {lastUpdate}</span>
+                 <span className="text-[8px] text-gray-500 font-mono mt-0.5">Atualizado: {lastUpdate}</span>
               </div>
             </div>
           </div>
