@@ -25,7 +25,11 @@ const calculateOptionPrice = (S: number, K: number, T: number, r: number, v: num
 const StrategyBuilder: React.FC = () => {
   const [legs, setLegs] = useState<StrategyLeg[]>([]);
   const [selectedUnderlying, setSelectedUnderlying] = useState<string>(MOCK_TICKERS[0].symbol);
-  const [daysToExpiry, setDaysToExpiry] = useState<number>(20);
+  
+  // Controle de Horizonte de Tempo
+  const [timeHorizon, setTimeHorizon] = useState<'monthly' | 'quarterly'>('monthly');
+  const daysToExpiry = timeHorizon === 'monthly' ? 20 : 90; // 20 dias ou 3 meses
+  
   const riskFreeRate = 0.1075;
   
   const currentSpot = useMemo(() => MOCK_TICKERS.find(t => t.symbol === selectedUnderlying)?.price || 38.45, [selectedUnderlying]);
@@ -64,6 +68,23 @@ const StrategyBuilder: React.FC = () => {
     <div className="flex flex-col gap-4">
       {/* Seletor Mobile */}
       <div className="bg-[#161b22] p-4 rounded-xl border border-gray-800 space-y-4">
+        
+        {/* Seletor de Horizonte de Tempo */}
+        <div className="flex bg-[#0d1117] p-1 rounded-lg border border-gray-700">
+          <button 
+            onClick={() => setTimeHorizon('monthly')} 
+            className={`flex-1 text-[10px] font-black uppercase py-1.5 rounded-md transition-all ${timeHorizon === 'monthly' ? 'bg-blue-600 text-white shadow' : 'text-gray-500'}`}
+          >
+            Mensal (20d)
+          </button>
+          <button 
+            onClick={() => setTimeHorizon('quarterly')} 
+            className={`flex-1 text-[10px] font-black uppercase py-1.5 rounded-md transition-all ${timeHorizon === 'quarterly' ? 'bg-purple-600 text-white shadow' : 'text-gray-500'}`}
+          >
+            Longo Prazo (90d)
+          </button>
+        </div>
+
         <div className="flex gap-2 overflow-x-auto no-scrollbar">
           {MOCK_TICKERS.slice(0, 5).map(ticker => (
             <button key={ticker.symbol} onClick={() => setSelectedUnderlying(ticker.symbol)} className={`px-4 py-2 rounded font-black text-[10px] uppercase border ${selectedUnderlying === ticker.symbol ? 'bg-blue-600 border-blue-500 text-white' : 'bg-[#0d1117] border-gray-700 text-gray-500'}`}>
@@ -83,7 +104,13 @@ const StrategyBuilder: React.FC = () => {
       </div>
 
       {/* Gráfico Mobile */}
-      <div className="bg-[#161b22] p-4 rounded-xl border border-gray-800 h-64 shadow-lg">
+      <div className="bg-[#161b22] p-4 rounded-xl border border-gray-800 h-64 shadow-lg relative">
+        <div className="absolute top-4 right-4 z-10">
+           <span className={`text-[9px] font-black px-2 py-0.5 rounded border ${timeHorizon === 'monthly' ? 'text-blue-400 border-blue-900/50 bg-blue-900/20' : 'text-purple-400 border-purple-900/50 bg-purple-900/20'}`}>
+             SIMULAÇÃO: {timeHorizon === 'monthly' ? '20 DIAS' : '3 MESES'}
+           </span>
+        </div>
+        
         {legs.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData}>

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MOCK_TICKERS } from './constants';
 import { OptionData } from './types';
 import Scanner from './components/Scanner';
@@ -12,9 +12,16 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'scanner' | 'builder' | 'market'>('scanner');
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState<string>("");
   
   // Estado para controlar o modo de visualização
   const [viewMode, setViewMode] = useState<'mobile' | 'web'>('mobile');
+
+  useEffect(() => {
+    // Simula a data da última atualização dos dados
+    const now = new Date();
+    setLastUpdate(now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
+  }, []);
 
   const handleAiAnalysis = async (options: OptionData[]) => {
     setIsAnalyzing(true);
@@ -82,9 +89,12 @@ const App: React.FC = () => {
                 )}
               </button>
 
-              <div className="flex items-center gap-1.5 bg-blue-900/20 px-2 py-1 rounded border border-blue-800/50">
-                 <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse"></div>
-                 <span className="text-[10px] font-black text-blue-400">LIVE</span>
+              <div className="flex flex-col items-end leading-none">
+                 <div className="flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse"></div>
+                    <span className="text-[10px] font-black text-blue-400">LIVE</span>
+                 </div>
+                 <span className="text-[8px] text-gray-500 font-mono mt-0.5">Updated: {lastUpdate}</span>
               </div>
             </div>
           </div>
@@ -136,7 +146,7 @@ const App: React.FC = () => {
                                 Gemini Insight
                                 <span className="px-1.5 py-0.5 rounded text-[8px] bg-blue-500 text-white font-mono">PRO</span>
                               </h3>
-                              <p className="text-[10px] text-blue-400/80 font-mono mt-0.5">RELATÓRIO DE ESTRUTURAÇÃO</p>
+                              <p className="text-[10px] text-blue-400/80 font-mono mt-0.5">ANÁLISE MULTI-TEMPORAL</p>
                             </div>
                           </div>
                           <button 

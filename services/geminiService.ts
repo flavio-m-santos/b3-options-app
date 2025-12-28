@@ -7,10 +7,11 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
 export const analyzeAtypicalMovements = async (data: OptionData[], marketTechnicals: TickerData[]): Promise<string> => {
   const atypicalOptions = data.filter(o => o.volumeAvgRatio > 2.5);
   
-  const prompt = `Analise as opções da B3 com volume atípico considerando o contexto técnico:
+  const prompt = `Analise as opções da B3 com volume atípico considerando o contexto técnico.
   
-  OPÇÕES ATÍPICAS: ${JSON.stringify(atypicalOptions)}
-  CONDIÇÕES TÉCNICAS DO MERCADO: ${JSON.stringify(marketTechnicals.map(t => ({
+  DADOS:
+  - Opções Atípicas: ${JSON.stringify(atypicalOptions)}
+  - Indicadores Técnicos: ${JSON.stringify(marketTechnicals.map(t => ({
     symbol: t.symbol,
     price: t.price,
     kairi: t.technicals.kairi,
@@ -18,12 +19,20 @@ export const analyzeAtypicalMovements = async (data: OptionData[], marketTechnic
     signal: t.technicals.signal
   })))}
   
-  Instrução:
-  1. Use o Kairi e IFR para validar se o volume atípico é exaustão (reversão) ou tendência (rompimento).
-  2. Sugira o Alvo de Strike (Strike de Saída) baseado na volatilidade e no desvio do Kairi.
-  3. Recomende uma estrutura (ex: Iron Condor se o Kairi for neutro, ou Travas se houver sinal).
+  Instrução Obrigatória - Forneça a resposta dividida em dois horizontes de tempo:
   
-  Retorne em Português com foco em 'Onde entrar' e 'Até onde levar (Alvo)'.`;
+  1. **TRADE MENSAL (Curto Prazo)**:
+     - Foco em Gamma e Delta.
+     - Identifique oportunidades de "tiro curto" para o vencimento atual.
+     - Sugira estruturas direcionais (Travas de Alta/Baixa) ou de volatilidade rápida.
+  
+  2. **TRADE LONGO PRAZO (> 3 Meses)**:
+     - Foco em Vega e Theta.
+     - Identifique oportunidades estruturais.
+     - Sugira estruturas como Calendar Spreads (Trava Horizontal), Travas Diagonais ou compra de LEAPS.
+     - Explique o racional de carregar essa posição por mais tempo.
+
+  Seja direto, técnico e use terminologia de opções da B3.`;
 
   try {
     const response = await ai.models.generateContent({
