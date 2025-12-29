@@ -1,6 +1,38 @@
 
 import { OptionData, OptionType, TickerData } from './types';
 
+// Função auxiliar para calcular o próximo vencimento (3ª sexta-feira do mês)
+const getNextExpiryDate = (monthsAhead: number = 0): string => {
+  const date = new Date();
+  date.setMonth(date.getMonth() + monthsAhead);
+  date.setDate(1); // Vai para o dia 1 do mês alvo
+
+  // Encontrar a primeira sexta-feira
+  let firstFriday = 0;
+  for (let i = 1; i <= 7; i++) {
+    date.setDate(i);
+    if (date.getDay() === 5) {
+      firstFriday = i;
+      break;
+    }
+  }
+
+  // 3ª sexta-feira é a primeira + 14 dias
+  const thirdFriday = firstFriday + 14;
+  date.setDate(thirdFriday);
+  
+  // Se a data calculada já passou (ex: hoje é dia 29, vencimento foi dia 20), pega o próximo mês
+  const today = new Date();
+  if (monthsAhead === 0 && date < today) {
+    return getNextExpiryDate(1);
+  }
+
+  return date.toISOString().split('T')[0];
+};
+
+const currentExpiry = getNextExpiryDate(0); // Vencimento mais próximo
+const nextExpiry = getNextExpiryDate(1);    // Vencimento seguinte
+
 export const MOCK_TICKERS: TickerData[] = [
   { 
     symbol: 'PETR4', price: 38.45, change: 0.55, changePercent: 1.45, high: 38.90, low: 37.80, volume: 45000000,
@@ -56,27 +88,27 @@ export const MOCK_TICKERS: TickerData[] = [
 
 export const MOCK_OPTIONS: OptionData[] = [
   {
-    ticker: 'PETRL385', underlying: 'PETR4', type: OptionType.CALL, strike: 38.50, expiry: '2024-12-20',
+    ticker: 'PETRL385', underlying: 'PETR4', type: OptionType.CALL, strike: 38.50, expiry: currentExpiry,
     lastPrice: 1.25, change: 15.4, volume: 1250000, openInterest: 4500000, iv: 32.5,
     delta: 0.52, gamma: 0.12, theta: -0.04, vega: 0.08, volumeAvgRatio: 4.8
   },
   {
-    ticker: 'PETRX360', underlying: 'PETR4', type: OptionType.PUT, strike: 36.00, expiry: '2024-12-20',
+    ticker: 'PETRX360', underlying: 'PETR4', type: OptionType.PUT, strike: 36.00, expiry: currentExpiry,
     lastPrice: 0.45, change: -22.1, volume: 850000, openInterest: 2100000, iv: 35.2,
     delta: -0.21, gamma: 0.08, theta: -0.03, vega: 0.05, volumeAvgRatio: 3.2
   },
   {
-    ticker: 'VALEL640', underlying: 'VALE3', type: OptionType.CALL, strike: 64.00, expiry: '2024-12-20',
+    ticker: 'VALEL640', underlying: 'VALE3', type: OptionType.CALL, strike: 64.00, expiry: currentExpiry,
     lastPrice: 0.88, change: -45.2, volume: 3200000, openInterest: 8500000, iv: 28.4,
     delta: 0.35, gamma: 0.10, theta: -0.02, vega: 0.07, volumeAvgRatio: 1.1
   },
   {
-    ticker: 'VALEX600', underlying: 'VALE3', type: OptionType.PUT, strike: 60.00, expiry: '2024-12-20',
+    ticker: 'VALEX600', underlying: 'VALE3', type: OptionType.PUT, strike: 60.00, expiry: currentExpiry,
     lastPrice: 1.12, change: 55.4, volume: 4100000, openInterest: 6200000, iv: 30.1,
     delta: -0.42, gamma: 0.11, theta: -0.03, vega: 0.06, volumeAvgRatio: 6.5
   },
   {
-    ticker: 'MGLUL190', underlying: 'MGLU3', type: OptionType.CALL, strike: 1.90, expiry: '2024-12-20',
+    ticker: 'MGLUL190', underlying: 'MGLU3', type: OptionType.CALL, strike: 1.90, expiry: currentExpiry,
     lastPrice: 0.12, change: 45.0, volume: 15200000, openInterest: 45000000, iv: 85.2,
     delta: 0.48, gamma: 1.25, theta: -0.01, vega: 0.02, volumeAvgRatio: 12.5
   }

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { OptionData } from '../types';
 import { MOCK_OPTIONS } from '../constants';
@@ -10,6 +9,11 @@ interface ScannerProps {
 
 const Scanner: React.FC<ScannerProps> = ({ onAnalyze, isAnalyzing }) => {
   const atypical = MOCK_OPTIONS.filter(o => o.volumeAvgRatio > 2.0).sort((a, b) => b.volumeAvgRatio - a.volumeAvgRatio);
+
+  const formatDate = (dateStr: string) => {
+    const [year, month, day] = dateStr.split('-');
+    return `${day}/${month}/${year}`;
+  };
 
   return (
     <div className="space-y-3">
@@ -23,7 +27,7 @@ const Scanner: React.FC<ScannerProps> = ({ onAnalyze, isAnalyzing }) => {
           disabled={isAnalyzing}
           className="bg-blue-600 active:bg-blue-700 disabled:bg-gray-800 text-white px-3 py-1.5 rounded text-[10px] font-black uppercase tracking-tighter"
         >
-          {isAnalyzing ? 'Processando...' : 'Análise IA'}
+          {isAnalyzing ? 'Analisando...' : 'Análise IA'}
         </button>
       </div>
 
@@ -37,7 +41,9 @@ const Scanner: React.FC<ScannerProps> = ({ onAnalyze, isAnalyzing }) => {
               </div>
               <div>
                 <div className="font-mono text-xs font-bold text-white uppercase">{opt.ticker}</div>
-                <div className="text-[10px] text-gray-500 font-bold uppercase tracking-tighter">Strike R$ {opt.strike.toFixed(2)}</div>
+                <div className="text-[9px] text-gray-500 font-bold uppercase tracking-tighter">
+                  K: R$ {opt.strike.toFixed(2)} | Vencto: {formatDate(opt.expiry)}
+                </div>
               </div>
             </div>
             
