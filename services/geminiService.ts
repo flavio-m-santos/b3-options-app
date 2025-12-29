@@ -1,7 +1,7 @@
+
 import { GoogleGenAI } from "@google/genai";
 import { OptionData, TickerData } from "../types";
 
-// Declaração para corrigir o erro 'Cannot find name process' no TypeScript
 declare const process: {
   env: {
     API_KEY: string;
@@ -9,56 +9,71 @@ declare const process: {
   }
 };
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
-
-export const analyzeAtypicalMovements = async (data: OptionData[], marketTechnicals: TickerData[]): Promise<string> => {
-  // Verificação de segurança da chave
-  if (!process.env.API_KEY) {
-    return "Erro: Chave de API não configurada. Verifique suas variáveis de ambiente.";
+/**
+ * Interface estendida para suportar o gerenciamento de chaves do ambiente.
+ * Fix: Use a named interface AIStudio to avoid property type mismatch and modifier conflicts on the global Window object.
+ */
+declare global {
+  interface AIStudio {
+    hasSelectedApiKey: () => Promise<boolean>;
+    openSelectKey: () => Promise<void>;
   }
 
-  const atypicalOptions = data.filter(o => o.volumeAvgRatio > 2.5);
+  interface Window {
+    aistudio: AIStudio;
+  }
+}
+
+export const analyzeAtypicalMovements = async (data: OptionData[], marketTechnicals: TickerData[]): Promise<string> => {
+  // Criar nova instância sempre para garantir o uso da chave atualizada
+  // Fix: Use process.env.API_KEY directly as required by the library guidelines.
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+  const atypicalOptions = data.filter(o => o.volumeAvgRatio > 2.0);
   
-  const prompt = `Analise as opções da B3 com volume atípico considerando o contexto técnico.
+  const prompt = `Você é um analista sênior de derivativos da B3. 
+  Analise os seguintes dados de opções e indicadores técnicos de mercado:
   
-  DADOS:
-  - Opções Atípicas: ${JSON.stringify(atypicalOptions)}
-  - Indicadores Técnicos: ${JSON.stringify(marketTechnicals.map(t => ({
-    symbol: t.symbol,
-    price: t.price,
-    kairi: t.technicals.kairi,
-    rsi: t.technicals.rsi7,
-    signal: t.technicals.signal
+  DADOS DE OPÇÕES ATÍPICAS:
+  ${JSON.stringify(atypicalOptions)}
+  
+  INDICADORES TÉCNICOS DOS ATIVOS:
+  ${JSON.stringify(marketTechnicals.map(t => ({
+    ticker: t.symbol,
+    preco: t.price,
+    sinal: t.technicals.signal,
+    rsi: t.technicals.rsi7
   })))}
   
-  Instrução Obrigatória - Forneça a resposta dividida em dois horizontes de tempo:
-  
-  1. **TRADE MENSAL (Curto Prazo)**:
-     - Foco em Gamma e Delta.
-     - Identifique oportunidades de "tiro curto" para o vencimento atual.
-     - Sugira estruturas direcionais (Travas de Alta/Baixa) ou de volatilidade rápida.
-  
-  2. **TRADE LONGO PRAZO (> 3 Meses)**:
-     - Foco em Vega e Theta.
-     - Identifique oportunidades estruturais.
-     - Sugira estruturas como Calendar Spreads (Trava Horizontal), Travas Diagonais ou compra de LEAPS.
-     - Explique o racional de carregar essa posição por mais tempo.
-
-  Seja direto, técnico e use terminologia de opções da B3.`;
+  REGRAS DE RESPOSTA:
+  1. Identifique se o volume atípico sugere montagem de posição institucional.
+  2. Sugira 2 estratégias: uma para o vencimento ATUAL e outra ESTRUTURAL (longo prazo).
+  3. Use terminologia B3 (ex: Travas, Calendário, Borboleta, Condor).
+  4. Seja extremamente conciso e direto.`;
 
   try {
-    // Usando gemini-3-flash-preview para maior compatibilidade e velocidade
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: prompt,
       config: {
-        temperature: 0.7,
+        temperature: 0.4,
       }
     });
 
+    // Fix: Access .text property directly (not a method).
     return response.text ?? "Análise indisponível no momento.";
-  } catch (error) {
+  } catch (error: any) {
     console.error("Gemini API Error:", error);
-    return "Erro ao conectar com a IA. Verifique se sua chave de API é válida e tem permissões para o modelo Gemini 3 Flash.";
+    
+    // Se o erro indicar que a chave não foi encontrada ou permissão negada
+    // Fix: Per guidelines, if "Requested entity was not found" is returned, prompt for key selection.
+    if (error.message?.includes("Requested entity was not found") || error.message?.includes("API key not found")) {
+      if (window.aistudio) {
+        await window.aistudio.openSelectKey();
+        return "Por favor, selecione uma chave de API válida para continuar a análise.";
+      }
+    }
+    
+    return `Falha na conexão: ${error.message || "Erro desconhecido"}. Verifique sua conexão ou tente novamente.`;
   }
 };
