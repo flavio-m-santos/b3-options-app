@@ -9,71 +9,72 @@ declare const process: {
   }
 };
 
-/**
- * Interface estendida para suportar o gerenciamento de chaves do ambiente.
- * Fix: Use a named interface AIStudio to avoid property type mismatch and modifier conflicts on the global Window object.
- */
 declare global {
   interface AIStudio {
     hasSelectedApiKey: () => Promise<boolean>;
     openSelectKey: () => Promise<void>;
   }
-
   interface Window {
-    aistudio: AIStudio;
+    aistudio?: AIStudio;
   }
 }
 
-export const analyzeAtypicalMovements = async (data: OptionData[], marketTechnicals: TickerData[]): Promise<string> => {
-  // Criar nova instância sempre para garantir o uso da chave atualizada
-  // Fix: Use process.env.API_KEY directly as required by the library guidelines.
+export interface AnalysisResult {
+  text: string;
+  sources: { title: string; uri: string }[];
+}
+
+export const analyzeAtypicalMovements = async (data: OptionData[], marketTechnicals: TickerData[]): Promise<AnalysisResult> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-  const atypicalOptions = data.filter(o => o.volumeAvgRatio > 2.0);
+  // Prompt focado em buscar dados REAIS de D-1 e movimentações recentes
+  const prompt = `Acesse os dados mais recentes da B3 (D-1) sobre o mercado de opções brasileiro.
+  Busque especificamente por:
+  1. Relatórios de posições em aberto e movimentações de ontem (D-1).
+  2. Séries de opções com maior volume atípico em PETR4, VALE3 e BBAS3.
+  3. Compare os dados fictícios locais: ${JSON.stringify(data.map(d => ({ ticker: d.ticker, vol: d.volume })))} com a realidade atual do mercado.
   
-  const prompt = `Você é um analista sênior de derivativos da B3. 
-  Analise os seguintes dados de opções e indicadores técnicos de mercado:
-  
-  DADOS DE OPÇÕES ATÍPICAS:
-  ${JSON.stringify(atypicalOptions)}
-  
-  INDICADORES TÉCNICOS DOS ATIVOS:
-  ${JSON.stringify(marketTechnicals.map(t => ({
-    ticker: t.symbol,
-    preco: t.price,
-    sinal: t.technicals.signal,
-    rsi: t.technicals.rsi7
-  })))}
-  
-  REGRAS DE RESPOSTA:
-  1. Identifique se o volume atípico sugere montagem de posição institucional.
-  2. Sugira 2 estratégias: uma para o vencimento ATUAL e outra ESTRUTURAL (longo prazo).
-  3. Use terminologia B3 (ex: Travas, Calendário, Borboleta, Condor).
-  4. Seja extremamente conciso e direto.`;
+  Responda em Português:
+  - Quais são os tickers reais de opções com maior fluxo institucional hoje/ontem?
+  - Existe alguma distorção relevante de volatilidade implícita ou volume?
+  - Cite os strikes e vencimentos mais negociados no fechamento D-1.`;
 
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: prompt,
       config: {
-        temperature: 0.4,
+        tools: [{ googleSearch: {} }],
+        temperature: 0.2,
       }
     });
 
-    // Fix: Access .text property directly (not a method).
-    return response.text ?? "Análise indisponível no momento.";
-  } catch (error: any) {
-    console.error("Gemini API Error:", error);
+    const text = response.text ?? "Não foi possível obter dados reais da B3 no momento.";
     
-    // Se o erro indicar que a chave não foi encontrada ou permissão negada
-    // Fix: Per guidelines, if "Requested entity was not found" is returned, prompt for key selection.
-    if (error.message?.includes("Requested entity was not found") || error.message?.includes("API key not found")) {
+    // Extraindo fontes da pesquisa (Grounding Chunks)
+    const sources: { title: string; uri: string }[] = [];
+    const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+    
+    if (groundingChunks) {
+      groundingChunks.forEach((chunk: any) => {
+        if (chunk.web && chunk.web.uri) {
+          sources.push({
+            title: chunk.web.title || "Fonte B3/Mercado",
+            uri: chunk.web.uri
+          });
+        }
+      });
+    }
+
+    return { text, sources };
+  } catch (error: any) {
+    console.error("Gemini Search Error:", error);
+    if (error.message?.includes("not found") || error.message?.includes("API key")) {
       if (window.aistudio) {
         await window.aistudio.openSelectKey();
-        return "Por favor, selecione uma chave de API válida para continuar a análise.";
+        return { text: "Por favor, selecione uma chave de API para buscar dados reais.", sources: [] };
       }
     }
-    
-    return `Falha na conexão: ${error.message || "Erro desconhecido"}. Verifique sua conexão ou tente novamente.`;
+    return { text: `Erro na busca: ${error.message}`, sources: [] };
   }
 };
